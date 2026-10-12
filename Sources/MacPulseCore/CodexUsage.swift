@@ -16,8 +16,9 @@ public struct UsageReading: Codable, Identifiable, Equatable {
     public let refreshedAt: Date
     public let windows: [UsageWindow]
     public let source: DataSourceState
-    public init(id: UUID = UUID(), refreshedAt: Date = Date(), windows: [UsageWindow], source: DataSourceState = .live) { self.id = id; self.refreshedAt = refreshedAt; self.windows = windows; self.source = source }
-    public func isFresh(at date: Date) -> Bool { source == .live && date.timeIntervalSince(refreshedAt) >= 0 && date.timeIntervalSince(refreshedAt) < 600 }
+    public let ordinaryUsageAllowed: Bool?
+    public init(id: UUID = UUID(), refreshedAt: Date = Date(), windows: [UsageWindow], source: DataSourceState = .live, ordinaryUsageAllowed: Bool? = nil) { self.ordinaryUsageAllowed = ordinaryUsageAllowed; self.id = id; self.refreshedAt = refreshedAt; self.windows = windows; self.source = source }
+    public func isFresh(at date: Date) -> Bool { source == .live && date.timeIntervalSince(refreshedAt) >= 0 && date.timeIntervalSince(refreshedAt) < 600 && windows.allSatisfy { $0.resetsAt == nil || $0.resetsAt! > date } }
 }
 public enum UsageParser {
     /// Official Codex app-server GetAccountRateLimitsResponse. No account identity is retained.
@@ -35,7 +36,7 @@ public enum UsageParser {
                 windows.append(UsageWindow(id: bucket + "." + slot, name: (snapshot["limitName"] as? String ?? bucket) + " · " + slot, usedPercent: used, durationMinutes: minutes, resetsAt: reset))
             }
         }
-        return UsageReading(refreshedAt: at, windows: windows)
+        return UsageReading(refreshedAt: at, windows: windows, ordinaryUsageAllowed: result["ordinaryUsageAllowed"] as? Bool)
     }
     public static func projectedExhaustion(window: UsageWindow, history: [UsageReading], now: Date) -> Date? {
         guard let reset = window.resetsAt, reset > now else { return nil }

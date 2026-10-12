@@ -41,7 +41,7 @@ struct Surface<Content: View>: View {
             HStack {
                 Text(title).font(.system(size: 14, weight: .semibold))
                 Spacer()
-                if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+                if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1).help(subtitle) }
             }
             content()
         }.padding(compact ? 15 : 20).frame(maxWidth: .infinity, alignment: .leading)

@@ -55,7 +55,7 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 9) {
                     Label(preferences.demo ? "Demonstration mode" : "On this Mac", systemImage: preferences.demo ? "sparkles" : "lock.shield")
                         .font(.caption).foregroundStyle(preferences.demo ? PulseStyle.violet : PulseStyle.cyan)
-                    Text(preferences.demo ? "Sample data. No live history is recorded." : "Private by design. No data leaves this Mac.").font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(preferences.demo ? "Sample data. No live history is recorded." : "Your activity history stays on this Mac.").font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(18)
             }.navigationSplitViewColumnWidth(220)
         } detail: {

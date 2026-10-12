@@ -14,8 +14,8 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("General") {
-                Toggle("Demonstration mode", isOn: $preferences.demo)
-                Toggle("Record application activity", isOn: $preferences.monitoring).disabled(preferences.demo)
+                Toggle("Demonstration mode", isOn: $preferences.demo).toggleStyle(.checkbox).accessibilityIdentifier("setting-demo")
+                Toggle("Record application activity", isOn: $preferences.monitoring).toggleStyle(.checkbox).accessibilityIdentifier("setting-recording").disabled(preferences.demo)
                 Text(preferences.demo ? "All displayed statistics are demonstration data; activity recording is suspended." : model.sessionState + " · monitoring resumes with your saved preference at launch.").font(.caption).foregroundStyle(.secondary)
                 Toggle("Show menu bar icon", isOn: $preferences.menuBarVisible)
                 Picker("Default dashboard page", selection: $preferences.defaultDashboard) { ForEach(DashboardPage.allCases) { Text($0.rawValue).tag($0.rawValue) } }

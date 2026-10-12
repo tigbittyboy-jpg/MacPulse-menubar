@@ -210,4 +210,12 @@ final class UpgradeTests: XCTestCase {
         XCTAssertEqual(observed[1].seconds, 0); XCTAssertNil(observed[0].seconds); XCTAssertNil(observed[2].seconds)
     }
 
+    func testExpiredUsageWindowIsStaleAndBackendPermissionIsIndependent() {
+        let t = Date(timeIntervalSince1970: 1000)
+        let reading = UsageParser.parse(result: ["ordinaryUsageAllowed": false, "rateLimits": ["primary": ["usedPercent": 10.0, "resetsAt": 999.0]]], at: t)
+        XCTAssertEqual(reading.ordinaryUsageAllowed, false)
+        XCTAssertFalse(reading.isFresh(at: t))
+        XCTAssertEqual(reading.windows.first?.remainingPercent, 90)
+    }
+
 }

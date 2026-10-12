@@ -1,5 +1,6 @@
 #if os(macOS)
 import SwiftUI
+import Charts
 import MacPulseCore
 
 struct NotchShape: Shape {
@@ -23,7 +24,7 @@ struct NotchView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                Image(systemName: "waveform.path.ecg").font(.system(size: 12)).foregroundStyle(PulseStyle.cyan).frame(width: 40)
+                Group { if preferences.demo { Text("DEMO").font(.system(size: 8, weight: .bold)).foregroundStyle(PulseStyle.violet) } else { Image(systemName: "waveform.path.ecg").font(.system(size: 12)).foregroundStyle(PulseStyle.cyan) } }.frame(width: 40)
                 Spacer(minLength: controller.notchWidth)
                 compactIndicator.frame(width: 40)
             }.padding(.horizontal, 8).frame(height: controller.notchHeight)
@@ -94,8 +95,8 @@ struct NotchView: View {
             case "CPU": Text(percent(model.system.cpu))
             case "Battery": Text(percent(model.system.battery))
             case "Session": Text(Analytics.duration(model.sessionSeconds))
-            case "Codex": Text(model.currentUsage?.windows.first.map { "\(Int($0.usedPercent))%" } ?? "—")
-            default: Circle().fill(preferences.demo ? PulseStyle.violet : (preferences.monitoring ? PulseStyle.cyan : .gray)).frame(width: 5, height: 5)
+            case "Codex": Text(model.usageSource == .live || model.usageSource == .demo ? (model.currentUsage?.windows.first.map { "\(Int($0.usedPercent))%" } ?? "—") : "—")
+            default: Circle().fill(preferences.demo ? PulseStyle.violet : (model.sessionState == "Recording" || model.sessionState == "Idle" ? PulseStyle.cyan : .gray)).frame(width: 5, height: 5)
             }
         }.font(.system(size: 9, weight: .medium)).monospacedDigit().lineLimit(1).foregroundStyle(.gray)
             .accessibilityLabel(preferences.compactIndicator + " compact indicator" + (preferences.demo ? ", demonstration data" : ""))
@@ -118,9 +119,13 @@ struct NotchView: View {
     private var activity: some View {
         VStack(alignment: .leading, spacing: 8) {
             if model.apps.isEmpty { EmptyState(title: "Your day starts here", detail: "Enable live monitoring in Settings.") }
-            ForEach(model.apps.prefix(3)) { AppRow(app: $0, total: model.todaySeconds) }
+            ForEach(model.apps.prefix(2)) { AppRow(app: $0, total: model.todaySeconds) }
             Divider()
             HStack { mini("Active today", Analytics.duration(model.todaySeconds), "hourglass"); Spacer(); mini("Session idle", Analytics.duration(model.sessionIdle), "pause") }
+            let recent = model.records.filter { $0.start >= (preferences.demo ? model.today : model.sessionStart) }.suffix(12)
+            if !recent.isEmpty {
+                Chart(Array(recent)) { record in BarMark(xStart: .value("Start", record.start), xEnd: .value("End", record.end), y: .value("Category", record.category.rawValue)).foregroundStyle(PulseStyle.category(record.category)) }.chartXAxis(.hidden).chartYAxis(.hidden).frame(height: 35).accessibilityLabel("Recent observed current-session application intervals")
+            }
             Text(model.apps.first.map { "Top category: " + $0.category.rawValue } ?? "No recorded category activity").font(.caption2).foregroundStyle(.gray)
         }
     }

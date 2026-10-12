@@ -23,12 +23,14 @@ final class MacPulseUITests: XCTestCase {
     }
     func testDemoAndMonitoringSettingsAreInteractive() {
         app.buttons["nav-Settings"].click()
-        let demo = app.checkBoxes["Demonstration mode"]
+        let demo = app.checkBoxes["setting-demo"]
         XCTAssertTrue(demo.waitForExistence(timeout: 5))
-        let tracking = app.checkBoxes["Record application activity"]
+        let tracking = app.checkBoxes["setting-recording"]
+        XCTAssertTrue(tracking.waitForExistence(timeout: 5))
         XCTAssertFalse(tracking.isEnabled)
         demo.click()
-        XCTAssertTrue(tracking.isEnabled)
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: tracking)
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed)
         tracking.click()
         app.buttons["nav-Overview"].click()
         XCTAssertTrue(app.staticTexts["Right now"].waitForExistence(timeout: 5))
