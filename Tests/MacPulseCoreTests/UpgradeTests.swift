@@ -199,4 +199,15 @@ final class UpgradeTests: XCTestCase {
         for kind in ReportExportKind.allCases where kind != .json { XCTAssertTrue(ReportExport.csv(kind: kind, snapshot: snapshot).hasSuffix("\n")) }
     }
 
+    func testUnobservedDayInsideLongSessionIsNotZero() {
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let start = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        var session = ComputerSession(start: start); session.observedUntil = start.addingTimeInterval(2 * 86400 + 60); session.activeSeconds = 60
+        let days = HistoryAnalytics.daily(records: [], sessions: [session], ending: session.observedUntil, count: 3, calendar: calendar)
+        XCTAssertTrue(days.allSatisfy { $0.seconds == nil })
+        let interval = StateInterval(sessionID: session.id, start: start.addingTimeInterval(86400), end: start.addingTimeInterval(86460), kind: .idle)
+        let observed = HistoryAnalytics.daily(records: [], sessions: [session], intervals: [interval], ending: session.observedUntil, count: 3, calendar: calendar)
+        XCTAssertEqual(observed[1].seconds, 0); XCTAssertNil(observed[0].seconds); XCTAssertNil(observed[2].seconds)
+    }
+
 }

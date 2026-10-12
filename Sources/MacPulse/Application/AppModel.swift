@@ -275,16 +275,16 @@ import MacPulseCore
         } catch { note(error.localizedDescription) }
     }
     func exportCSV() { export(format: "Activity CSV") }
-    func export(format: String) {
+    func export(format: String, ending: Date? = nil) {
         let panel = NSSavePanel(); let kind = ReportExportKind(rawValue: format) ?? .activity; let json = kind == .json
         panel.allowedContentTypes = json ? [.json] : [.commaSeparatedText]
-        panel.nameFieldStringValue = "MacPulse-" + (preferences.demo ? "demo-" : "") + (json ? "history.json" : "activity.csv")
+        panel.nameFieldStringValue = "MacPulse-" + (preferences.demo ? "demo-" : "") + (json ? "history.json" : kind.rawValue.lowercased().replacingOccurrences(of: " csv", with: "").replacingOccurrences(of: " ", with: "-") + ".csv")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
                 let samples = preferences.demo ? [] : try database?.loadSamples(limit: 600_000) ?? []
                 let snapshot = ExportSnapshot(source: source, activity: records, sessions: sessions, stateIntervals: intervals, codex: codex, systemSamples: samples, usageReadings: preferences.demo ? [] : usageHistory)
             if json { try snapshot.json().write(to: url, options: .atomic) }
-            else { try ReportExport.csv(kind: kind, snapshot: snapshot).write(to: url, atomically: true, encoding: .utf8) }
+            else { try ReportExport.csv(kind: kind, snapshot: snapshot, ending: ending).write(to: url, atomically: true, encoding: .utf8) }
         } catch { note(error.localizedDescription) }
     }
     func importCodex() {

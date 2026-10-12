@@ -7,7 +7,7 @@ struct OverviewPage: View {
     @ObservedObject var model: AppModel
     @State private var range = 7
     private var source: DataSourceState { model.source }
-    private var days: [ObservedDay] { HistoryAnalytics.daily(records: model.records, sessions: model.sessions, ending: model.now, count: 7) }
+    private var days: [ObservedDay] { HistoryAnalytics.daily(records: model.records, sessions: model.sessions, intervals: model.intervals, ending: model.now, count: 7) }
     private var average: Double? { let known = days.compactMap(\.seconds); return known.isEmpty ? nil : known.reduce(0, +) / Double(known.count) }
     private var yesterday: Double? { days.dropLast().last?.seconds }
     private var development: Double { model.apps.filter { $0.category == .development }.reduce(0) { $0 + $1.seconds } }
@@ -30,7 +30,7 @@ struct OverviewPage: View {
             Surface(title: "Today's rhythm", subtitle: "LOCAL DAY · RECORDED INTERVALS") { DayTimeline(records: model.records, intervals: model.intervals, date: model.today) }
             Surface(title: "Activity by category", subtitle: "HOURS") {
                 Picker("Overview date range", selection: $range) { Text("7 days").tag(7); Text("30 days").tag(30) }.pickerStyle(.segmented).frame(width: 200)
-                StackedActivityChart(records: model.records, sessions: model.sessions, ending: model.now, days: range)
+                StackedActivityChart(records: model.records, sessions: model.sessions, intervals: model.intervals, ending: model.now, days: range)
             }
             HStack(alignment: .top, spacing: 18) {
                 Surface(title: "Top five applications", subtitle: "TODAY") {
@@ -65,14 +65,14 @@ struct ScreenTimePage: View {
                 Picker("Category", selection: $category) { Text("All categories").tag("All categories"); ForEach(ActivityCategory.allCases) { Text($0.rawValue).tag($0.rawValue) } }
             }
             let usage = Analytics.applications(filtered, from: start, to: end)
-            let days = HistoryAnalytics.daily(records: filtered, sessions: model.sessions, ending: ending, count: range)
+            let days = HistoryAnalytics.daily(records: filtered, sessions: model.sessions, intervals: model.intervals, ending: ending, count: range)
             let known = days.compactMap(\.seconds)
             HStack {
                 MetricCard(title: "Selected day", value: Analytics.duration(usage.reduce(0) { $0 + $1.seconds }), detail: start.formatted(date: .abbreviated, time: .omitted), symbol: "calendar", source: days.last?.seconds == nil ? .unavailable : model.source)
                 MetricCard(title: "Recorded range", value: Analytics.duration(known.reduce(0, +)), detail: "\(known.count) observed days · unobserved days excluded", symbol: "chart.bar", tint: PulseStyle.violet, source: known.isEmpty ? .unavailable : model.source)
                 MetricCard(title: "Observed-day average", value: known.isEmpty ? "—" : Analytics.duration(known.reduce(0, +) / Double(known.count)), detail: "Partial-day observations are included", symbol: "divide", tint: PulseStyle.cyan, source: known.isEmpty ? .unavailable : model.source)
             }
-            Surface(title: "Daily category totals", subtitle: "RECORDED ACTIVE HOURS") { StackedActivityChart(records: filtered, sessions: model.sessions, ending: ending, days: range) }
+            Surface(title: "Daily category totals", subtitle: "RECORDED ACTIVE HOURS") { StackedActivityChart(records: filtered, sessions: model.sessions, intervals: model.intervals, ending: ending, days: range) }
             Surface(title: "Selected-day timeline", subtitle: "ACTIVE · IDLE · SLEEP") { DayTimeline(records: filtered, intervals: model.intervals, date: ending) }
             Surface(title: "Application breakdown", subtitle: "SELECTED DAY") { ForEach(usage) { AppRow(app: $0, total: usage.reduce(0) { $0 + $1.seconds }) } }
         }
@@ -81,11 +81,11 @@ struct ScreenTimePage: View {
 struct InsightsPage: View {
     @ObservedObject var model: AppModel
     @State private var ending = Date()
-    private var recap: WeeklyRecap { HistoryAnalytics.recap(records: model.records, sessions: model.sessions, codex: model.codex, ending: ending) }
+    private var recap: WeeklyRecap { HistoryAnalytics.recap(records: model.records, sessions: model.sessions, codex: model.codex, intervals: model.intervals, ending: ending) }
     var body: some View {
         let summary = recap
         VStack(spacing: 18) {
-            HStack { DatePicker("Seven days ending", selection: $ending, in: ...Date(), displayedComponents: .date); Spacer(); SourceBadge(source: model.source); Button("Export recap…") { model.export(format: ReportExportKind.weekly.rawValue) } }
+            HStack { DatePicker("Seven days ending", selection: $ending, in: ...Date(), displayedComponents: .date); Spacer(); SourceBadge(source: model.source); Button("Export recap…") { model.export(format: ReportExportKind.weekly.rawValue, ending: ending) } }
             if summary.recordedDays == 0 { EmptyState(title: "Insights need recorded activity", detail: "Enable monitoring or choose a date range with observations. Missing history is never treated as zero.") }
             else {
                 HStack {
@@ -112,7 +112,7 @@ struct InsightsPage: View {
                     LabeledContent("Longest application period", value: longestApp.map { $0.appName + " · " + Analytics.duration($0.duration) } ?? "Unavailable")
                     Text("These records cover retained observations, not your lifetime computer usage. No productivity score or psychological interpretation is assigned.").font(.caption).foregroundStyle(.secondary)
                 }
-                Surface(title: "Selected week", subtitle: "ACTIVE HOURS BY CATEGORY") { StackedActivityChart(records: model.records, sessions: model.sessions, ending: ending) }
+                Surface(title: "Selected week", subtitle: "ACTIVE HOURS BY CATEGORY") { StackedActivityChart(records: model.records, sessions: model.sessions, intervals: model.intervals, ending: ending) }
             }
         }
     }

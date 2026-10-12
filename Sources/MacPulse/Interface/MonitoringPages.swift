@@ -97,15 +97,35 @@ struct CodexPage: View {
     @ViewBuilder private var recentCard: some View {
     Surface(title: "Recent sessions", subtitle: model.importStatus.uppercased()) {
         HStack { if !model.preferences.demo { Button(model.importing ? "Importing…" : "Import metadata…") { model.importCodex() }.disabled(model.importing) }; Spacer(); Button("Export metadata…") { model.export(format: ReportExportKind.codex.rawValue) } }
-        ForEach(model.codex.sorted { $0.lastEvent > $1.lastEvent }.prefix(30)) { session in
-            VStack(alignment: .leading, spacing: 6) {
-                HStack { Text(session.project).font(.system(size: 13, weight: .medium)); Spacer(); Text(Analytics.duration(session.duration) + " session span").font(.caption).monospacedDigit() }
-                HStack { Text(session.date.formatted(date: .abbreviated, time: .shortened)); Spacer(); Text(session.model ?? "Model unavailable") }.font(.caption2).foregroundStyle(.secondary)
-                Text("Input " + (session.inputTokens?.formatted() ?? "—") + " · Output " + (session.outputTokens?.formatted() ?? "—") + " · Cached input " + (session.cachedTokens?.formatted() ?? "—")).font(.caption2).foregroundStyle(.secondary).monospacedDigit()
-                Divider().opacity(0.4)
-            }
+        ForEach(Array(model.codex.sorted { $0.lastEvent > $1.lastEvent }.prefix(30))) { session in
+            CodexSessionRow(session: session)
         }
     }
+    }
+}
+private struct CodexSessionRow: View {
+    let session: CodexSession
+    private var tokenDescription: String {
+        let input = session.inputTokens?.formatted() ?? "—"
+        let output = session.outputTokens?.formatted() ?? "—"
+        let cached = session.cachedTokens?.formatted() ?? "—"
+        return "Input \(input) · Output \(output) · Cached input \(cached)"
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(session.project).font(.system(size: 13, weight: .medium))
+                Spacer()
+                Text(Analytics.duration(session.duration) + " session span").font(.caption).monospacedDigit()
+            }
+            HStack {
+                Text(session.date.formatted(date: .abbreviated, time: .shortened))
+                Spacer()
+                Text(session.model ?? "Model unavailable")
+            }.font(.caption2).foregroundStyle(.secondary)
+            Text(tokenDescription).font(.caption2).foregroundStyle(.secondary).monospacedDigit()
+            Divider().opacity(0.4)
+        }
     }
 }
 struct ApplicationsPage: View {

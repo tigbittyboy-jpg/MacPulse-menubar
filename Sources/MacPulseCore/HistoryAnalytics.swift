@@ -31,13 +31,15 @@ public struct WeeklyRecap {
     public let codexSessions: Int
 }
 public enum HistoryAnalytics {
-    public static func daily(records: [ActivityRecord], sessions: [ComputerSession], ending: Date, count: Int, calendar: Calendar = .current) -> [ObservedDay] {
+    public static func daily(records: [ActivityRecord], sessions: [ComputerSession], intervals: [StateInterval] = [], ending: Date, count: Int, calendar: Calendar = .current) -> [ObservedDay] {
         let today = calendar.startOfDay(for: ending)
         return (0..<max(0, count)).reversed().compactMap { offset in
             guard let start = calendar.date(byAdding: .day, value: -offset, to: today), let end = calendar.date(byAdding: .day, value: 1, to: start) else { return nil }
             let total = records.reduce(0) { $0 + $1.overlap(from: start, to: end) }
-            let observed = sessions.reduce(0.0) { $0 + max(0, min($1.end ?? $1.observedUntil, end).timeIntervalSince(max($1.start, start))) }
-            let known = observed > 0 || records.contains { $0.overlap(from: start, to: end) > 0 }
+            let stateTime = intervals.reduce(0.0) { $0 + max(0, min($1.end, end).timeIntervalSince(max($1.start, start))) }
+            let sameDayObserved = sessions.filter { calendar.isDate($0.start, inSameDayAs: start) && calendar.isDate($0.observedUntil, inSameDayAs: start) }.reduce(0.0) { $0 + $1.activeSeconds + $1.idleSeconds + $1.sleepSeconds }
+            let observed = max(total + stateTime, sameDayObserved)
+            let known = observed > 0
             return ObservedDay(date: start, seconds: known ? total : nil, observedSeconds: observed)
         }
     }
@@ -60,8 +62,8 @@ public enum HistoryAnalytics {
             return ApplicationDetail(usage: usage, average: usage.seconds / Double(max(1, durations.count)), longest: durations.max() ?? 0)
         }
     }
-    public static func recap(records: [ActivityRecord], sessions: [ComputerSession], codex: [CodexSession], ending: Date, calendar: Calendar = .current) -> WeeklyRecap {
-        let days = daily(records: records, sessions: sessions, ending: ending, count: 14, calendar: calendar)
+    public static func recap(records: [ActivityRecord], sessions: [ComputerSession], codex: [CodexSession], intervals: [StateInterval] = [], ending: Date, calendar: Calendar = .current) -> WeeklyRecap {
+        let days = daily(records: records, sessions: sessions, intervals: intervals, ending: ending, count: 14, calendar: calendar)
         let recent = Array(days.suffix(7)), previous = Array(days.prefix(7))
         let start = recent.first?.date ?? calendar.startOfDay(for: ending)
         let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: ending))!

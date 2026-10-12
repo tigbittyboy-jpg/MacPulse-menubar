@@ -6,12 +6,13 @@ import MacPulseCore
 struct StackedActivityChart: View {
     let records: [ActivityRecord]
     let sessions: [ComputerSession]
+    var intervals: [StateInterval] = []
     let ending: Date
     var days = 7
     @State private var inspection: Date?
     var body: some View {
         let values = HistoryAnalytics.stacked(records: records, ending: ending, count: days)
-        let coverage = HistoryAnalytics.daily(records: records, sessions: sessions, ending: ending, count: days)
+        let coverage = HistoryAnalytics.daily(records: records, sessions: sessions, intervals: intervals, ending: ending, count: days)
         VStack(alignment: .leading, spacing: 10) {
             if values.isEmpty { EmptyState(title: "No recorded activity in this range", detail: "Dates without observations are unknown, not zero usage.") }
             else {
