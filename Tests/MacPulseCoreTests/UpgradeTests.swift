@@ -147,7 +147,7 @@ final class UpgradeTests: XCTestCase {
         let window = UsageWindow(id: "a", name: "A", usedPercent: 40, durationMinutes: nil, resetsAt: reset)
         XCTAssertNil(UsageParser.projectedExhaustion(window: window, history: [], now: t))
         let old = UsageWindow(id: "a", name: "A", usedPercent: 20, durationMinutes: nil, resetsAt: reset)
-        let projection = UsageParser.projectedExhaustion(window: window, history: [UsageReading(refreshedAt: t.addingTimeInterval(-600), windows: [old])], now: t)
+        let projection = UsageParser.projectedExhaustion(window: window, history: [UsageReading(refreshedAt: t.addingTimeInterval(-600), windows: [old], accountID: "account-a")], now: t, accountID: "account-a")
         XCTAssertEqual(projection, t.addingTimeInterval(1800))
     }
     func testOfficialAppServerHandshakeAgainstDeterministicChild() async throws {
@@ -216,6 +216,27 @@ final class UpgradeTests: XCTestCase {
         XCTAssertEqual(reading.ordinaryUsageAllowed, false)
         XCTAssertFalse(reading.isFresh(at: t))
         XCTAssertEqual(reading.windows.first?.remainingPercent, 90)
+    }
+
+    func testUsageProjectionNeverCombinesAccountsOrUnknownScope() {
+        let t = Date(timeIntervalSince1970: 1000), reset = Date(timeIntervalSince1970: 5000)
+        let old = UsageWindow(id: "a", name: "A", usedPercent: 20, durationMinutes: nil, resetsAt: reset)
+        let current = UsageWindow(id: "a", name: "A", usedPercent: 40, durationMinutes: nil, resetsAt: reset)
+        let history = [UsageReading(refreshedAt: t.addingTimeInterval(-600), windows: [old], accountID: "account-a")]
+        XCTAssertNil(UsageParser.projectedExhaustion(window: current, history: history, now: t))
+        XCTAssertNil(UsageParser.projectedExhaustion(window: current, history: history, now: t, accountID: "account-b"))
+        XCTAssertNotNil(UsageParser.projectedExhaustion(window: current, history: history, now: t, accountID: "account-a"))
+    }
+
+    func testUsageAlertsRemainDeduplicatedWhenAccountsSwitchBack() {
+        let t = Date(timeIntervalSince1970: 1000)
+        let window = UsageWindow(id: "a", name: "A", usedPercent: 90, durationMinutes: nil, resetsAt: t.addingTimeInterval(1000))
+        var policy = UsageAlertPolicy()
+        let a = UsageReading(refreshedAt: t, windows: [window], accountID: "account-a")
+        let b = UsageReading(refreshedAt: t, windows: [window], accountID: "account-b")
+        XCTAssertEqual(policy.alerts(reading: a, now: t, threshold: 80, enabled: true).count, 1)
+        XCTAssertEqual(policy.alerts(reading: b, now: t, threshold: 80, enabled: true).count, 1)
+        XCTAssertTrue(policy.alerts(reading: a, now: t, threshold: 80, enabled: true).isEmpty)
     }
 
 }

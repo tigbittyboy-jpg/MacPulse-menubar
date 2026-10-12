@@ -34,7 +34,7 @@ struct CodexPage: View {
                     HStack { Text(window.name).font(.system(size: 13, weight: .semibold)); Spacer(); Text("\(Int(window.usedPercent))% used · \(Int(window.remainingPercent))% remaining").font(.caption).monospacedDigit() }
                     ProgressView(value: window.usedPercent / 100).tint(window.usedPercent >= 95 ? .red : (window.usedPercent >= 80 ? .orange : PulseStyle.violet))
                     HStack { Text(window.durationMinutes.map { "Reported window: \($0) minutes" } ?? "Window duration unavailable"); Spacer(); Text("Reset: " + SampleMath.resetCountdown(reset: window.resetsAt, now: model.now)) }.font(.caption2).foregroundStyle(.secondary).monospacedDigit()
-                    if model.usageSource == .live, let projection = UsageParser.projectedExhaustion(window: window, history: model.usageHistory, now: model.now) {
+                    if model.usageSource == .live, let projection = UsageParser.projectedExhaustion(window: window, history: model.usageHistory, now: model.now, accountID: reading.accountID) {
                         Text("Estimated exhaustion at " + projection.formatted(date: .abbreviated, time: .shortened) + " if the recently observed rate continues. Reset is " + (window.resetsAt?.formatted(date: .abbreviated, time: .shortened) ?? "unknown") + ".").font(.caption2).foregroundStyle(.secondary)
                     }
                 }.padding(.vertical, 5)
@@ -90,8 +90,12 @@ struct CodexPage: View {
     @ViewBuilder private var usageHistoryCard: some View {
     if !model.usageHistory.isEmpty && !model.preferences.demo {
         Surface(title: "Recorded subscription readings", subtitle: "POINTS · NO INFERRED HISTORY") {
-            let readings = Array(model.usageHistory.prefix(200))
-            Chart { ForEach(readings) { reading in ForEach(reading.windows) { window in PointMark(x: .value("Refresh", reading.refreshedAt), y: .value("Used %", window.usedPercent)).foregroundStyle(by: .value("Window", window.name)) } } }.chartYScale(domain: 0...100).frame(height: 160)
+            if let accountID = model.currentUsage?.accountID, !accountID.isEmpty {
+                let readings = Array(model.usageHistory.filter { $0.accountID == accountID }.prefix(200))
+                Chart { ForEach(readings) { reading in ForEach(reading.windows) { window in PointMark(x: .value("Refresh", reading.refreshedAt), y: .value("Used %", window.usedPercent)).foregroundStyle(by: .value("Window", window.name)) } } }.chartYScale(domain: 0...100).frame(height: 160)
+            } else {
+                Text("Historical account scope unavailable. Readings without an account identifier are retained, but are not combined into a trend.").font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
     }

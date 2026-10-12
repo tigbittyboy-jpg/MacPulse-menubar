@@ -17,11 +17,12 @@ public struct UsageReading: Codable, Identifiable, Equatable {
     public let windows: [UsageWindow]
     public let source: DataSourceState
     public let ordinaryUsageAllowed: Bool?
-    public init(id: UUID = UUID(), refreshedAt: Date = Date(), windows: [UsageWindow], source: DataSourceState = .live, ordinaryUsageAllowed: Bool? = nil) { self.ordinaryUsageAllowed = ordinaryUsageAllowed; self.id = id; self.refreshedAt = refreshedAt; self.windows = windows; self.source = source }
+    public let accountID: String?
+    public init(id: UUID = UUID(), refreshedAt: Date = Date(), windows: [UsageWindow], source: DataSourceState = .live, ordinaryUsageAllowed: Bool? = nil, accountID: String? = nil) { self.accountID = accountID; self.ordinaryUsageAllowed = ordinaryUsageAllowed; self.id = id; self.refreshedAt = refreshedAt; self.windows = windows; self.source = source }
     public func isFresh(at date: Date) -> Bool { source == .live && date.timeIntervalSince(refreshedAt) >= 0 && date.timeIntervalSince(refreshedAt) < 600 && windows.allSatisfy { $0.resetsAt == nil || $0.resetsAt! > date } }
 }
 public enum UsageParser {
-    /// Official Codex app-server GetAccountRateLimitsResponse. No account identity is retained.
+    /// Official Codex app-server response. Account identity scopes allowance history; no auth token is retained.
     public static func parse(result: [String: Any], at: Date = Date()) -> UsageReading {
         let buckets = result["rateLimitsByLimitId"] as? [String: [String: Any]]
         let snapshots = buckets?.isEmpty == false ? buckets! : ["codex": result["rateLimits"] as? [String: Any] ?? [:]]
@@ -36,11 +37,11 @@ public enum UsageParser {
                 windows.append(UsageWindow(id: bucket + "." + slot, name: (snapshot["limitName"] as? String ?? bucket) + " · " + slot, usedPercent: used, durationMinutes: minutes, resetsAt: reset))
             }
         }
-        return UsageReading(refreshedAt: at, windows: windows, ordinaryUsageAllowed: result["ordinaryUsageAllowed"] as? Bool)
+        return UsageReading(refreshedAt: at, windows: windows, ordinaryUsageAllowed: result["ordinaryUsageAllowed"] as? Bool, accountID: result["accountId"] as? String)
     }
-    public static func projectedExhaustion(window: UsageWindow, history: [UsageReading], now: Date) -> Date? {
-        guard let reset = window.resetsAt, reset > now else { return nil }
-        let candidates = history.filter { $0.source == .live && now.timeIntervalSince($0.refreshedAt) < 3600 && $0.refreshedAt <= now }.sorted { $0.refreshedAt < $1.refreshedAt }
+    public static func projectedExhaustion(window: UsageWindow, history: [UsageReading], now: Date, accountID: String? = nil) -> Date? {
+        guard let accountID, !accountID.isEmpty, let reset = window.resetsAt, reset > now else { return nil }
+        let candidates = history.filter { $0.source == .live && $0.accountID == accountID && now.timeIntervalSince($0.refreshedAt) < 3600 && $0.refreshedAt <= now }.sorted { $0.refreshedAt < $1.refreshedAt }
         guard let first = candidates.first(where: { reading in reading.windows.contains { $0.id == window.id && $0.resetsAt == reset } }), let previous = first.windows.first(where: { $0.id == window.id && $0.resetsAt == reset }), now.timeIntervalSince(first.refreshedAt) >= 300, window.usedPercent > previous.usedPercent else { return nil }
         let rate = (window.usedPercent - previous.usedPercent) / now.timeIntervalSince(first.refreshedAt)
         return now.addingTimeInterval(window.remainingPercent / rate)
@@ -51,11 +52,16 @@ public struct UsageAlertPolicy {
     public init(delivered: Set<String> = []) { self.delivered = delivered }
     public mutating func alerts(reading: UsageReading, now: Date, threshold: Int, enabled: Bool) -> [UsageWindow] {
         guard enabled, reading.isFresh(at: now), [50, 80, 95].contains(threshold) else { return [] }
-        let prefixes = reading.windows.compactMap { window in window.resetsAt.map { "\(window.id)-\($0.timeIntervalSince1970)-" } }
-        delivered = Set(delivered.filter { key in prefixes.contains { key.hasPrefix($0) } })
+        let account = reading.accountID ?? "unspecified-account"
+        delivered = Set(delivered.filter { key in
+            let parts = key.split(separator: "-")
+            guard let epoch = parts.dropLast().last.flatMap({ Double($0) }) else { return false }
+            return epoch > now.timeIntervalSince1970
+        })
+        if delivered.count > 500 { delivered = Set(delivered.sorted().suffix(400)) }
         return reading.windows.filter { window in
             guard let reset = window.resetsAt, reset > now, window.usedPercent >= Double(threshold) else { return false }
-            let key = "\(window.id)-\(reset.timeIntervalSince1970)-\(threshold)"
+            let key = "\(account)-\(window.id)-\(reset.timeIntervalSince1970)-\(threshold)"
             return delivered.insert(key).inserted
         }
     }

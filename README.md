@@ -71,9 +71,11 @@ Local JSONL formats are version-dependent. Missing token/model values remain una
 
 Choose the installed official **Codex CLI executable** in Settings and click **Read allowance**. The CLI must already be signed in through its own supported authentication flow. MacPulse does not request, extract, store or copy credentials.
 
+Opaque backend account identifiers are retained with allowance readings solely to keep account histories and projections separate; authentication tokens are never retained. If account identity is unavailable, projection is disabled.
+
 The adapter starts a short-lived `codex app-server` process, sends `initialize`, `initialized`, and the documented `account/rateLimits/read` request, then stops its owned process. It does not create threads/turns, execute tools or scrape browser cookies. It uses backend-reported multi-bucket windows and reset times without hardcoded plan limits. Unsupported CLI versions, API-only accounts, request failures and missing windows produce an unavailable state. A previous reading is marked Historical/stale rather than silently presented as current.
 
-Opt-in refresh is every five minutes. Alerts at a selectable 50/80/95% threshold require fresh authenticated data and a known future reset; they are deduplicated per window/reset/threshold and never run from demo or stale data. Notification permission is requested only when you enable alerts. Consumption projection appears only with increasing readings for the same reset window separated by at least five minutes and is labeled an estimate.
+Opt-in refresh is every five minutes. Alerts at a selectable 50/80/95% threshold require fresh authenticated data and a known future reset; they are deduplicated per window/reset/threshold and never run from demo or stale data. Notification permission is requested only when you enable alerts. Consumption projection appears only with increasing readings for the same backend-reported account and reset window separated by at least five minutes and is labeled an estimate.
 
 The protocol was inspected in [OpenAI's official generated schema](https://github.com/openai/codex/blob/a9b0815167c27ab13719dd12d13b63e02b70d221/codex-rs/app-server-protocol/schema/typescript/v2/GetAccountRateLimitsResponse.ts). See [integration notes](docs/INTEGRATIONS.md). Real authenticated end-to-end usage on your Mac still needs validation; deterministic protocol tests do not prove your particular CLI/account supports it.
 

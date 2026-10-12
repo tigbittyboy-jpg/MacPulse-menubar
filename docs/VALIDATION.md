@@ -1,30 +1,38 @@
-# Validation and remaining Mac checks
+# Upgrade validation
 
-## Executed in this cloud session
+## Local checks
 
-The host is Debian Linux x86_64. The official Swift 6.2.3 Ubuntu toolchain was downloaded over verified TLS and its detached release signature verified against the official Swift release key (fingerprint `52BB7E3DE28A71BE22EC05FFEF80A866B47A981F`). The key has since expired; the release signature was created while it was valid. Signature verification was not disabled. SQLite development headers/libraries were obtained using APT's authenticated Debian package metadata and unpacked into `/workspace/toolchains/sysroot`, without a root installation.
+The cloud host is Debian Linux x86_64. The official Swift 6.2.3 toolchain was verified against the Swift release signature; SQLite headers/libraries were obtained through authenticated Debian APT metadata. No package/TLS/signature verification was disabled.
 
-- Portable core library and Linux command-line fallback compiled and linked.
-- XCTest: **11 tests passed, zero failures**, covering app switching, idle/disabled/excluded intervals, sleep gaps, demo/live recording isolation, midnight overlap, weekly totals, SQLite reopen/upsert, retention/deletion, persistent samples/events, metadata parsing and CSV escaping.
-- The additional Swift Testing runner reports zero tests because this suite uses XCTest; the XCTest count above is the meaningful result.
-- All macOS app source files passed Swift's syntax parser with the macOS target selected. This does **not** resolve AppKit/SwiftUI types or prove a macOS build.
-- Shell scripts passed `bash -n`. The bundle script correctly refuses to build on Linux.
-- Xcode project structure, scheme XML and Info.plist were checked locally. Xcode itself is unavailable.
+The upgraded portable suite executed **34 XCTest tests, zero failures**. It exercises foreground switching and exclusions, clipped idle boundaries/resumption, monotonic clock discontinuities, demo/live isolation, daily/week ranking, DST days, unknown historical coverage, session recovery without downtime backfill, atomic rollback, additive legacy migration, future-schema refusal, corrupt-row isolation, old optional payloads, CPU/network counter resets, local model/cached-token parsing, export/source labels, saved-setting defaults, official multi-bucket rate parsing, independent backend usage permission, stale/reset handling, account-isolated projection/alert deduplication and a deterministic app-server handshake/timeout.
 
-No macOS application was launched, no GUI automation ran and no visual review of a rendered application was performed. The macOS CI file has not been dispatched in this session. No runnable `.app` or notarized distribution is claimed.
+The Swift Testing runner's separate zero-test message is not the suite outcome; the XCTest suite above is the meaningful result. The macOS files also passed a syntax parse locally. Xcode source references, object references, scheme XML and Info.plist were validated; shell/Python helpers were checked. Linux itself cannot build AppKit/SwiftUI binaries or run GUI tests.
 
-## Manual verification on macOS — pending
+## Native macOS CI evidence
 
-1. Build the MacPulse scheme with Xcode and run both `swift test` and native Xcode tests. Package with `scripts/build-app.sh`; verify the bundle opens from Applications and displays its icon.
-2. In initial Demo mode, visit every dashboard page, change date/application filters, edit categories, export CSV, change appearance and inspect layout at minimum window size. Confirm the demo banner remains visible and no recording occurs.
-3. Turn off Demo, enable monitoring and switch between two apps. Verify elapsed foreground time, app icons and day totals. Pause recording; verify totals stop growing. Re-enable and verify the paused interval is not backfilled.
-4. Leave the Mac idle for more than 60 seconds, then resume. Sleep/wake and lock/unlock it. Confirm idle/sleep gaps are excluded and events appear only during enabled live recording. Check behavior across midnight.
-5. Quit and relaunch; recorded activity, categories, Codex metadata and recent minute samples should survive. Check retention and delete history with confirmation; relaunch to confirm deletion. Demo data should remain separate.
-6. On a notched MacBook, hover each side indicator, leave quickly, click to expand, switch all three tabs, click outside, press Escape and open the dashboard. Verify rounded lower corners, no hardware-notch overlap with visible text and no menu-bar obstruction.
-7. Connect/disconnect an external monitor, change scaling, enter fullscreen apps, switch Spaces and move the menu bar. Confirm positioning updates and the panel does not steal key focus. On a non-notched screen, test menu bar fallback alignment and edge clamping.
-8. Enable Reduce Motion and turn animations off; verify resizing/transitions respect both. Check focus behavior during rapid hovering/clicking and long app/project names at minimum sizes.
-9. Check CPU and network changes under load against Activity Monitor, battery charge while plugged/unplugged and storage against Finder. Validate unavailable values on desktop Macs; verify there are no fabricated sensor readings.
-10. Import a selected Codex sessions folder in live mode, including partial/malformed lines. Verify only project basename, dates and aggregate token counts persist. Confirm no auth files are read, no session contents are retained, and subscription allowance remains unavailable.
-11. Enable login registration from the installed bundle, approve if requested and verify at next login. Disable it and verify removal. Profile CPU/memory over an hour, check observer/timer cleanup when quitting and confirm no unexpected network traffic.
+Baseline `f2898e1` run [38207459091](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38207459091) had passing Swift-package tests but a failing native Xcode step before this upgrade. Debug testability was made explicit. Initial upgrade runs exposed SwiftUI type-checker timeouts, which were fixed by splitting the Codex page and its session row into smaller expressions.
 
-Visual refinement in this session was a source review of spacing, minimum sizes, native typography, contrast choices and animation settings. The rendered interface and behavior require the checks above.
+At `6a97b79`, run [38213677951](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38213677951) passed the Swift-package tests, native Xcode tests, Release packaging, archive and upload. Its mode UI test exposed a checkbox lookup problem, then explicit identifiers/control styling repaired that test.
+
+At `e7cfaad`, run [38214375025](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38214375025) passed **both the macOS build/test/package job and the separate UI job**. The UI target executes two tests: eight-page navigation with screenshots, and demo/live recording-control interactions. A later navigation test was strengthened to target the real page heading rather than a matching sidebar string; the macOS accessibility label/value distinction is addressed with an explicit VoiceOver label and unique identifier.
+
+At `8c14226`, run [38215887842](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38215887842) passed native build/test/package and both UI tests after strengthening the actual page-heading assertion and correcting all-input idle polling. The subsequent account-scope regression checks passed locally; its final native run is recorded below when complete. Failed, repaired and pending outcomes are kept distinct.
+
+## Artifact and build locations
+
+A successful packaging job creates `build/MacPulse.app` on the macOS runner, verifies its ad hoc signature and archives it as `build/MacPulse-macOS.zip`. Download the **MacPulse-validation** artifact for the intended successful run; it contains build logs and the nested app ZIP. The **MacPulse-UI-results** artifact includes the UI log and `UITests.xcresult`, with kept screenshots. These are CI-produced artifacts, not an application built inside this Linux workspace.
+
+The same local Mac command `./scripts/build-app.sh` produces `<checkout>/build/MacPulse.app`. No notarization/public distribution signing is claimed. No rendered screenshots were inspected by the assistant in this cloud session; automated screenshot capture and a human visual review are different checks.
+
+## Manual acceptance checks still pending
+
+- Physical notched MacBook alignment, hover/click behavior during rapid interaction, monitor scaling/hot-plug, fullscreen/Spaces, menu-bar auto-hide, nonactivation/focus and keyboard dismissal. CI machines do not establish physical notch behavior.
+- Rendered screenshot review across all eight pages at minimum size, chart hover/selection/zoom, long app/project names, light/dark/system appearance, source badges, Reduce Motion and density.
+- Foreground tracking against known elapsed time on the user's Mac, lock/idle/resumption, sleep/wake, process termination, retention and quit/relaunch preservation. Interval/persistence arithmetic is covered by core tests; real OS event accuracy still needs verification.
+- Real CPU/memory/battery/storage/network/process values compared with macOS tools, interface changes, desktops without batteries and pressure events; background CPU/memory/power profiling over sustained use.
+- Launch-at-login registration/approval from the installed bundle. No privacy prompt is requested by ordinary activity collection.
+- Actual signed-in official Codex CLI handshake and authenticated usage readings, account variations, service errors, optional notification permission and delivered alerts. Tests use deterministic child-process fixtures rather than a real account. Local metadata folder import and version compatibility on the user's installation still need checking.
+
+## Explicit limits
+
+Now Playing/provider-specific integration, GPU/temperature/battery-health sensors, universal OS Screen Time history, per-project foreground attribution, precise per-app activation counts, custom category creation, live filesystem watching, auto-update and distribution notarization are not implemented. Unsupported metrics remain unavailable. Daily aggregates are derived from retained intervals rather than stored redundantly. Session detail timelines show the starting day; Screen Time offers each calendar date. Network interface totals can overlap VPN/bridge traffic, and process CPU is a lifetime average rather than an instantaneous sample.
