@@ -16,7 +16,13 @@ At `6a97b79`, run [38213677951](https://github.com/tigbittyboy-jpg/MacPulse-menu
 
 At `e7cfaad`, run [38214375025](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38214375025) passed **both the macOS build/test/package job and the separate UI job**. The UI target executes two tests: eight-page navigation with screenshots, and demo/live recording-control interactions. A later navigation test was strengthened to target the real page heading rather than a matching sidebar string; the macOS accessibility label/value distinction is addressed with an explicit VoiceOver label and unique identifier.
 
-At `8c14226`, run [38215887842](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38215887842) passed native build/test/package and both UI tests after strengthening the actual page-heading assertion and correcting all-input idle polling. The subsequent account-scope regression checks passed locally; its final native run is recorded below when complete. Failed, repaired and pending outcomes are kept distinct.
+At `8c14226`, run [38215887842](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38215887842) passed native build/test/package and both UI tests after strengthening the actual page-heading assertion and correcting all-input idle polling. The subsequent account-scope regression checks passed locally. Final application source `2b0fc9f` is validated below. Failed, repaired and pending outcomes are kept distinct.
+
+## Final application source outcome
+
+Run [38216741402](https://github.com/tigbittyboy-jpg/MacPulse-menubar/actions/runs/38216741402) for `2b0fc9f` completed **Success**. Both jobs passed: Swift-package compilation/core tests, native Xcode tests, Release app build, signature verification, ZIP packaging/upload, and the two GUI interaction tests with actual page-heading assertions and kept screenshots. The source contains 34 core test methods and two GUI test methods; both suites were executed by their respective schemes. Application source and build/test configuration are unchanged by the final documentation-only commit.
+
+Download **MacPulse-validation** from that run, extract its `MacPulse-macOS.zip`, then drag `MacPulse.app` to Applications. **MacPulse-UI-results** contains the captured page screenshots inside its result bundle. These screenshots were captured by the runner but were not visually inspected in this cloud session. Physical notch geometry and real authenticated account behavior remain manual checks, as listed below.
 
 ## Artifact and build locations
 

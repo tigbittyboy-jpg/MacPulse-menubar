@@ -47,3 +47,7 @@ The public baseline Actions run `38207459091` for `f2898e1` reports success for 
 ## Compatibility risks and validation limits
 
 New optional fields must decode old JSON payloads. Migrations must preserve old tables and fail safely on future schemas. New tables must not invent historical sessions for old intervals. Unknown historical coverage must remain unknown. macOS monitoring and AppKit/SwiftUI type checking, fullscreen/menu-bar behavior, visual inspection, login registration and performance profiling require a Mac. Native build and bundle creation are blocked on this Linux host; this is recorded rather than treating a syntax parse as a native build. Official usage integration and universal media information remain independently unavailable, so neither blocks local analytics implementation.
+
+## Upgrade outcome
+
+The working application identity, original preference keys and old SQLite tables were preserved. Additive schema 2 migration and old optional payload compatibility are covered by tests. The final source at `2b0fc9f` passed Linux's 34 core tests and macOS CI's native build/test/package plus two GUI tests in run `38216741402`. The baseline Xcode failure, SwiftUI solver timeouts and GUI accessibility lookup failures were repaired and regression-checked. Screenshot attachments exist, but no rendered visual review, physical notch test, sustained profiling, login approval or real authenticated allowance read is claimed. See docs/VALIDATION.md for remaining acceptance checks.
