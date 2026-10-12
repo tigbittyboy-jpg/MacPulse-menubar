@@ -64,8 +64,12 @@ final class NotchPanel: NSPanel {
             notchHeight = screen.safeAreaInsets.top
             if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea { notchWidth = max(100, right.minX - left.maxX) }
             updateFrame(animated: false); panel.orderFrontRegardless()
-        } else if state == .collapsed { panel.orderOut(nil) }
-        else { updateFrame(animated: false) }
+        } else if state == .collapsed { panel.orderOut(nil); model.notchExpanded = false }
+        else {
+            screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main
+            notchHeight = 12; notchWidth = 160
+            updateFrame(animated: false)
+        }
     }
     func hover(_ inside: Bool) {
         hoverTask?.cancel()
@@ -103,7 +107,7 @@ final class NotchPanel: NSPanel {
     private func updateFrame(animated: Bool = true) {
         guard let screen else { return }
         let physicalNotch = model.preferences.notchEnabled && screen.safeAreaInsets.top > 0
-        let top = physicalNotch ? screen.frame.maxY : screen.visibleFrame.maxY
+        let top = physicalNotch ? screen.frame.maxY : (fallbackAnchor?.minY ?? screen.visibleFrame.maxY)
         let desiredX = (physicalNotch ? screen.frame.midX : (fallbackAnchor?.midX ?? screen.frame.midX)) - size.width / 2
         let x = min(screen.frame.maxX - size.width - 8, max(screen.frame.minX + 8, desiredX))
         let frame = NSRect(x: x, y: top - size.height, width: size.width, height: size.height)

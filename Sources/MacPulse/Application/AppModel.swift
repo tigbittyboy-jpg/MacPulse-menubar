@@ -167,7 +167,8 @@ import MacPulseCore
         guard !asleep else { return }
         now = Date()
         if today != reportDay { reportDay = today; demoRecords = DemoData.activity(now: now); demoSessions = DemoData.sessions(now: now); demoCodex = DemoData.codex(now: now); reportsMode = nil }
-        idleSeconds = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null)
+        // kCGAnyInputEventType: inspect time since any input, not null events.
+        idleSeconds = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: UInt32.max)!)
         let app = NSWorkspace.shared.frontmostApplication
         activeBundle = app?.bundleIdentifier ?? "unknown"; activeApp = app?.localizedName ?? "Unknown application"
         let uptime = ProcessInfo.processInfo.systemUptime

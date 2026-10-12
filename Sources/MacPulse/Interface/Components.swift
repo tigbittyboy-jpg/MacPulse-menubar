@@ -24,7 +24,7 @@ extension EnvironmentValues {
 struct SourceBadge: View {
     let source: DataSourceState
     var body: some View {
-        Text(source.rawValue.uppercased()).font(.system(size: 9, weight: .semibold)).tracking(0.5)
+        Text(source.rawValue.uppercased()).font(.system(size: 9, weight: .semibold)).tracking(0.5).fixedSize(horizontal: true, vertical: false)
             .foregroundStyle(source == .demo ? PulseStyle.violet : (source == .live ? PulseStyle.cyan : Color.secondary))
             .padding(.horizontal, 7).padding(.vertical, 4).background(Color.primary.opacity(0.06), in: Capsule())
             .accessibilityLabel("Data source: " + source.rawValue)

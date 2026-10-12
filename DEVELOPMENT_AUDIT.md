@@ -20,6 +20,7 @@ Bundle identity `com.macpulse.app`, database location, existing tables and decod
 ## Gaps and defects
 
 - Sparse overview; no insights, coverage-aware comparison or real computer-session summaries.
+- Idle polling queried null events rather than the documented any-input sentinel; this is corrected in the upgrade.
 - Activity uses wall time; entire intervals are dropped when idle threshold is crossed; exclusions incorrectly discard the preceding application's final interval.
 - No persisted session boundaries or idle/sleep intervals. Session duration is reconstructed only for the current launch.
 - Missing historical dates are shown as zero; smooth chart interpolation implies continuity across missing samples.
