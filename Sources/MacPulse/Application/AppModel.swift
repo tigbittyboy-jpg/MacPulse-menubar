@@ -84,12 +84,12 @@ import MacPulseCore
         if !preferences.demo { return history }
         return (0..<60).map { i in PerformancePoint(date: now.addingTimeInterval(Double(i - 59) * 5), cpu: 0.18 + sin(Double(i) * 0.4) * 0.06, memory: 0.46 + sin(Double(i) * 0.1) * 0.025, upload: 84_000, download: 2_400_000) }
     }
-    init(preferences: Preferences = Preferences()) {
+    init(preferences: Preferences = Preferences(), databaseURL: URL? = nil) {
         self.preferences = preferences
         diagnostics = UserDefaults.standard.stringArray(forKey: "diagnosticLog") ?? []
         do {
             let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("MacPulse")
-            database = try Database(url: support.appendingPathComponent("activity.sqlite"))
+            database = try Database(url: databaseURL ?? support.appendingPathComponent("activity.sqlite"))
             try database?.prune(before: Date().addingTimeInterval(-Double(preferences.retention) * 86400))
             liveRecords = try database?.load() ?? []; liveCodex = try database?.loadCodex() ?? []
             liveSessions = try database?.recoverInterruptedSessions() ?? []; liveIntervals = try database?.loadIntervals() ?? []

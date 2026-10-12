@@ -15,7 +15,7 @@ def identifier(value):
 missing = []
 objects = []
 references = []
-for target, directory in [('app', 'Sources/MacPulse'), ('core', 'Sources/MacPulseCore'), ('tests', 'Tests/MacPulseCoreTests')]:
+for target, directory in [('app', 'Sources/MacPulse'), ('core', 'Sources/MacPulseCore'), ('tests', 'Tests/MacPulseCoreTests'), ('ui', 'Tests/MacPulseUITests')]:
     build_ids = []
     for path in sorted((root / directory).rglob('*.swift')):
         relative = path.relative_to(root).as_posix()

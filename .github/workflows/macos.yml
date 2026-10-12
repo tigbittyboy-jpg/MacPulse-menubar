@@ -40,3 +40,25 @@ jobs:
             build/*.log
             build/MacPulse-macOS.zip
           if-no-files-found: warn
+  ui-tests:
+    needs: macos
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Dashboard interaction tests and screenshots
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild -project MacPulse.xcodeproj -scheme MacPulse-UI -destination 'platform=macOS' -derivedDataPath build/UIData -resultBundlePath build/UITests.xcresult CODE_SIGNING_ALLOWED=NO test 2>&1 | tee build/ui-test.log
+      - name: Report UI diagnostics
+        if: always()
+        run: python3 scripts/annotate-build-errors.py build/ui-test.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: MacPulse-UI-results
+          path: |
+            build/ui-test.log
+            build/UITests.xcresult

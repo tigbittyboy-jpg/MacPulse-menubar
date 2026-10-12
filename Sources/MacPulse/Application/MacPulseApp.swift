@@ -8,7 +8,18 @@ import Combine
     var body: some Scene { Settings { SettingsView(model: delegate.model, preferences: delegate.model.preferences).frame(width: 570, height: 650) } }
 }
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    let model = AppModel()
+    let model: AppModel = {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+            let domain = "com.macpulse.ui-tests"
+            let defaults = UserDefaults(suiteName: domain)!
+            defaults.removePersistentDomain(forName: domain)
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("MacPulse-UI-Tests").appendingPathComponent(UUID().uuidString).appendingPathComponent("activity.sqlite")
+            return AppModel(preferences: Preferences(defaults: defaults), databaseURL: url)
+        }
+        #endif
+        return AppModel()
+    }()
     private var status: NSStatusItem?
     private var notch: NotchController?
     private var dashboard: NSWindow?

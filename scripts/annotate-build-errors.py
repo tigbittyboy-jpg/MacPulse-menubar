@@ -22,7 +22,7 @@ for name in sys.argv[1:]:
         if match:
             file, number, message = match.groups()
             if '/MacPulse-menubar/' in file:
-                file = file.split('/MacPulse-menubar/', 1)[1]
+                file = file.rsplit('/MacPulse-menubar/', 1)[1]
             print(f'::error file={escape(file)},line={number}::{escape(message)}')
         else:
             print('::error::' + escape(line))
