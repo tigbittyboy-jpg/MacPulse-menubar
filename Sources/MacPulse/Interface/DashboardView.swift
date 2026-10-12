@@ -96,7 +96,7 @@ struct DashboardView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 7) {
-                Text(page.rawValue).font(.system(size: 30, weight: .bold, design: .rounded)).accessibilityIdentifier("page-heading")
+                Text(page.rawValue).font(.system(size: 30, weight: .bold, design: .rounded)).accessibilityIdentifier("page-heading").accessibilityLabel(page.rawValue)
                 Text(page.subtitle).font(.system(size: 13)).foregroundStyle(.secondary)
             }
             Spacer()

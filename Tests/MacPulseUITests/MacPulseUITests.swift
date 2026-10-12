@@ -16,9 +16,10 @@ final class MacPulseUITests: XCTestCase {
             let button = app.buttons["nav-" + page]
             XCTAssertTrue(button.waitForExistence(timeout: 5), "Missing navigation: " + page)
             button.click()
-            let heading = app.staticTexts["page-heading"]
-            let updated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", page), object: heading)
-            XCTAssertEqual(XCTWaiter.wait(for: [updated], timeout: 5), .completed, "Missing page heading: " + page)
+            let heading = app.descendants(matching: .any)["page-heading"].firstMatch
+            XCTAssertTrue(heading.waitForExistence(timeout: 5), "Actual page heading is missing")
+            let updated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@ OR value == %@", page, page), object: heading)
+            XCTAssertEqual(XCTWaiter.wait(for: [updated], timeout: 5), .completed, "Missing page heading: \(page); label=\(heading.label); value=\(String(describing: heading.value))")
             let attachment = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
             attachment.name = "Dashboard-" + page; attachment.lifetime = .keepAlways; add(attachment)
         }
