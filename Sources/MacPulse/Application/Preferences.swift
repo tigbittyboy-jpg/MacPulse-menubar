@@ -55,6 +55,7 @@ final class Preferences: ObservableObject {
         accent = defaults.string(forKey: "accent") ?? "Blue"
         reducedEffects = defaults.bool(forKey: "reducedEffects")
     }
+    var storage: UserDefaults { defaults }
     func category(for bundle: String) -> ActivityCategory {
         categories[bundle].flatMap(ActivityCategory.init(rawValue:)) ?? .suggested(for: bundle)
     }

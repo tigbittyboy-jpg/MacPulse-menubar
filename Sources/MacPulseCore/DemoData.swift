@@ -28,6 +28,12 @@ public enum DemoData {
             return session
         }
     }
+    public static func intervals(for sessions: [ComputerSession]) -> [StateInterval] {
+        sessions.compactMap { session in
+            guard let end = session.end, session.idleSeconds > 0 else { return nil }
+            return StateInterval(id: session.id, sessionID: session.id, start: end.addingTimeInterval(-session.idleSeconds), end: end, kind: .idle)
+        }
+    }
     public static func codex(now: Date = Date()) -> [CodexSession] {
         (0..<12).map { index in
             let start = now.addingTimeInterval(-Double(index * 5400 + 1200))

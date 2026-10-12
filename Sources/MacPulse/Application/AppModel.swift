@@ -54,12 +54,12 @@ import MacPulseCore
     private var reportDay = Calendar.current.startOfDay(for: Date())
     private var usageTask: Task<Void, Never>?
     private var lastUsageAttempt = Date.distantPast
-    private var alertPolicy = UsageAlertPolicy(delivered: Set(UserDefaults.standard.stringArray(forKey: "deliveredUsageAlerts") ?? []))
+    private var alertPolicy = UsageAlertPolicy()
     private var pressureSource: DispatchSourceMemoryPressure?
     @Published private(set) var memoryPressure = "Unavailable · awaiting system signal"
     var codex: [CodexSession] { (preferences.demo ? demoCodex : liveCodex).filter { !preferences.isProjectExcluded($0.project) } }
     var sessions: [ComputerSession] { preferences.demo ? demoSessions : liveSessions }
-    var intervals: [StateInterval] { preferences.demo ? [] : liveIntervals }
+    var intervals: [StateInterval] { preferences.demo ? DemoData.intervals(for: demoSessions) : liveIntervals }
     var system: SystemSnapshot { preferences.demo ? .demo : liveSystem }
     var source: DataSourceState { preferences.demo ? .demo : .historical }
     var today: Date { Calendar.current.startOfDay(for: now) }
@@ -86,7 +86,8 @@ import MacPulseCore
     }
     init(preferences: Preferences = Preferences(), databaseURL: URL? = nil) {
         self.preferences = preferences
-        diagnostics = UserDefaults.standard.stringArray(forKey: "diagnosticLog") ?? []
+        alertPolicy = UsageAlertPolicy(delivered: Set(preferences.storage.stringArray(forKey: "deliveredUsageAlerts") ?? []))
+        diagnostics = preferences.storage.stringArray(forKey: "diagnosticLog") ?? []
         do {
             let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true).appendingPathComponent("MacPulse")
             database = try Database(url: databaseURL ?? support.appendingPathComponent("activity.sqlite"))
@@ -256,7 +257,7 @@ import MacPulseCore
     func note(_ message: String) {
         error = message
         diagnostics.insert(Date().formatted(date: .abbreviated, time: .shortened) + " · " + message, at: 0)
-        diagnostics = Array(diagnostics.prefix(20)); UserDefaults.standard.set(diagnostics, forKey: "diagnosticLog")
+        diagnostics = Array(diagnostics.prefix(20)); preferences.storage.set(diagnostics, forKey: "diagnosticLog")
     }
     func recordEvent(_ kind: String, application: String? = nil) {
         guard currentSession != nil, !preferences.demo else { return }
@@ -271,7 +272,7 @@ import MacPulseCore
     func deleteData() {
         do {
             try database?.deleteAll(); liveRecords = []; liveCodex = []; liveSessions = []; liveIntervals = []; usageHistory = []; savedSamples = []; history = []; events = []
-            currentSession = nil; reportsMode = nil; clock.reset(); sessionStart = Date(); alertPolicy = UsageAlertPolicy(); UserDefaults.standard.removeObject(forKey: "deliveredUsageAlerts")
+            currentSession = nil; reportsMode = nil; clock.reset(); sessionStart = Date(); alertPolicy = UsageAlertPolicy(); preferences.storage.removeObject(forKey: "deliveredUsageAlerts")
             transitionRecording(preferences.monitoring && !preferences.demo); rebuildReports()
         } catch { note(error.localizedDescription) }
     }
@@ -324,7 +325,7 @@ import MacPulseCore
                 try database?.saveUsage(reading); usageHistory.insert(reading, at: 0); if usageHistory.count > 3000 { usageHistory.removeLast() }
                 usageStatus = "Connected"
                 let alerts = alertPolicy.alerts(reading: reading, now: Date(), threshold: preferences.alertThreshold, enabled: preferences.usageAlerts)
-                UserDefaults.standard.set(Array(alertPolicy.delivered), forKey: "deliveredUsageAlerts")
+                preferences.storage.set(Array(alertPolicy.delivered), forKey: "deliveredUsageAlerts")
                 for window in alerts {
                     let content = UNMutableNotificationContent(); content.title = "Codex usage · \(preferences.alertThreshold)% threshold"; content.body = "\(window.name): \(Int(window.usedPercent))% used."
                     try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
