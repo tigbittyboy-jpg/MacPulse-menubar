@@ -32,7 +32,7 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(tick(0)); XCTAssertEqual(tick(5)?.duration, 5)
         XCTAssertNil(tick(10, idle: 65)); XCTAssertNil(tick(15)); XCTAssertEqual(tick(20)?.duration, 5)
         XCTAssertNil(tick(25, enabled: false)); XCTAssertNil(tick(30)); XCTAssertEqual(tick(35)?.duration, 5)
-        XCTAssertNil(tick(40, excluded: true)); XCTAssertNil(tick(45)); XCTAssertEqual(tick(50)?.duration, 5)
+        XCTAssertEqual(tick(40, excluded: true)?.duration, 5); XCTAssertNil(tick(45)); XCTAssertEqual(tick(50)?.duration, 5)
         XCTAssertNil(tick(1000)); XCTAssertEqual(tick(1005)?.duration, 5)
         clock.reset(); XCTAssertNil(tick(1010))
     }

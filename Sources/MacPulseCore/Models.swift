@@ -2,7 +2,7 @@ import Foundation
 
 public enum ActivityCategory: String, Codable, CaseIterable, Identifiable {
     case development = "Development", music = "Music Production", gaming = "Gaming"
-    case browsing = "Browsing", communication = "Communication", entertainment = "Entertainment", other = "Other"
+    case browsing = "Browsing", communication = "Communication", entertainment = "Entertainment", utilities = "Utilities", other = "Other"
     public var id: String { rawValue }
     public static func suggested(for bundle: String) -> Self {
         let value = bundle.lowercased()
@@ -12,6 +12,7 @@ public enum ActivityCategory: String, Codable, CaseIterable, Identifiable {
         if ["safari", "chrome", "firefox"].contains(where: value.contains) { return .browsing }
         if ["slack", "messages", "discord", "mail"].contains(where: value.contains) { return .communication }
         if ["spotify", "music", "tv"].contains(where: value.contains) { return .entertainment }
+        if ["finder", "activitymonitor", "systempreferences", "calculator"].contains(where: value.contains) { return .utilities }
         return .other
     }
 }
@@ -60,7 +61,8 @@ public enum Analytics {
         }
     }
     public static func duration(_ seconds: Double) -> String {
-        let minutes = max(0, Int(seconds) / 60)
+        guard seconds.isFinite else { return "—" }
+        let minutes = Int(min(Double(Int.max / 60), max(0, seconds / 60)))
         if minutes < 60 { return "\(minutes)m" }
         return "\(minutes / 60)h \(minutes % 60)m"
     }
@@ -93,9 +95,11 @@ public struct CodexSession: Codable, Identifiable, Equatable {
     public let project: String
     public let inputTokens: Int?
     public let outputTokens: Int?
+    public let cachedTokens: Int?
+    public let model: String?
     public var duration: Double { max(0, lastEvent.timeIntervalSince(date)) }
-    public init(id: String, date: Date, lastEvent: Date, project: String, inputTokens: Int? = nil, outputTokens: Int? = nil) {
-        self.id = id; self.date = date; self.lastEvent = lastEvent; self.project = project; self.inputTokens = inputTokens; self.outputTokens = outputTokens
+    public init(id: String, date: Date, lastEvent: Date, project: String, inputTokens: Int? = nil, outputTokens: Int? = nil, cachedTokens: Int? = nil, model: String? = nil) {
+        self.id = id; self.date = date; self.lastEvent = lastEvent; self.project = project; self.inputTokens = inputTokens; self.outputTokens = outputTokens; self.cachedTokens = cachedTokens; self.model = model
     }
 }
 
@@ -104,7 +108,9 @@ public struct SystemSample: Codable, Identifiable, Equatable {
     public let date: Date
     public let cpu: Double
     public let memoryRatio: Double
-    public init(id: UUID = UUID(), date: Date, cpu: Double, memoryRatio: Double) { self.id = id; self.date = date; self.cpu = cpu; self.memoryRatio = memoryRatio }
+    public let upload: Double?
+    public let download: Double?
+    public init(id: UUID = UUID(), date: Date, cpu: Double, memoryRatio: Double, upload: Double? = nil, download: Double? = nil) { self.id = id; self.date = date; self.cpu = cpu; self.memoryRatio = memoryRatio; self.upload = upload; self.download = download }
 }
 public struct SessionEvent: Codable, Identifiable, Equatable {
     public let id: UUID

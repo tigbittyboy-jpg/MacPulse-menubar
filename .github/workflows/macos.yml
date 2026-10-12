@@ -3,20 +3,40 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   macos:
     runs-on: macos-15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - name: Core tests
-        run: swift test --jobs 4
+      - name: Core and Swift-package tests
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build
+          swift test --jobs 4 2>&1 | tee build/swift-test.log
       - name: Native Xcode tests
-        run: xcodebuild -project MacPulse.xcodeproj -scheme MacPulse -destination 'platform=macOS' -derivedDataPath build/TestData CODE_SIGNING_ALLOWED=NO test
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild -project MacPulse.xcodeproj -scheme MacPulse -destination 'platform=macOS' -derivedDataPath build/TestData CODE_SIGNING_ALLOWED=NO test 2>&1 | tee build/xcode-test.log
       - name: Package application
-        run: ./scripts/build-app.sh
+        shell: bash
+        run: |
+          set -o pipefail
+          ./scripts/build-app.sh 2>&1 | tee build/package.log
       - name: Archive bundle
         run: ditto -c -k --keepParent build/MacPulse.app build/MacPulse-macOS.zip
+      - name: Report compiler diagnostics
+        if: always()
+        run: python3 scripts/annotate-build-errors.py build/swift-test.log build/xcode-test.log build/package.log
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: MacPulse-macOS
-          path: build/MacPulse-macOS.zip
+          name: MacPulse-validation
+          path: |
+            build/*.log
+            build/MacPulse-macOS.zip
+          if-no-files-found: warn

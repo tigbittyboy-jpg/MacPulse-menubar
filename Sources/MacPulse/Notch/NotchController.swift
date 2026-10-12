@@ -20,13 +20,15 @@ final class NotchPanel: NSPanel {
     private var displayObserver: NSObjectProtocol?
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    private var subscriptions: Set<AnyCancellable> = []
+    private var wakeObserver: NSObjectProtocol?
     private var hoverTask: Task<Void, Never>?
     var state: NotchState { interaction.state }
     var size: CGSize {
         switch state {
-        case .collapsed: return CGSize(width: notchWidth + 64, height: notchHeight)
-        case .hover: return CGSize(width: 480, height: notchHeight + 178)
-        case .expanded: return CGSize(width: 580, height: notchHeight + 340)
+        case .collapsed: return CGSize(width: notchWidth + 96, height: notchHeight)
+        case .hover: return CGSize(width: 480, height: notchHeight + 210)
+        case .expanded: return CGSize(width: 580, height: notchHeight + 400)
         }
     }
     init(model: AppModel, openDashboard: @escaping () -> Void) {
@@ -38,6 +40,8 @@ final class NotchPanel: NSPanel {
         panel.isMovable = false; panel.isReleasedWhenClosed = false
         panel.contentView = NSHostingView(rootView: NotchView(controller: self, model: model, preferences: model.preferences))
         displayObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in Task { @MainActor in self?.reposition() } }
+        model.preferences.$notchEnabled.dropFirst().sink { [weak self] _ in DispatchQueue.main.async { self?.reposition() } }.store(in: &subscriptions)
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in Task { @MainActor in self?.reposition() } }
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in Task { @MainActor in self?.dismissIfOutside() } }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] event in
             if event.type == .keyDown && event.keyCode == 53 { Task { @MainActor in self?.dismiss() } }
@@ -50,8 +54,10 @@ final class NotchPanel: NSPanel {
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         hoverTask?.cancel()
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
     }
     func reposition() {
+        guard model.preferences.notchEnabled else { interaction.dismiss(); panel.orderOut(nil); screen = nil; model.notchExpanded = false; return }
         // Choose the built-in notched display wherever it appears in the display layout.
         screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
         if let screen {
@@ -82,11 +88,12 @@ final class NotchPanel: NSPanel {
     func click() { hoverTask?.cancel(); interaction.click(); updateFrame() }
     func dismiss() {
         hoverTask?.cancel(); interaction.dismiss()
-        if (screen?.safeAreaInsets.top ?? 0) == 0 { panel.orderOut(nil); screen = nil } else { updateFrame() }
+        if (screen?.safeAreaInsets.top ?? 0) == 0 || !model.preferences.notchEnabled { panel.orderOut(nil); screen = nil; model.notchExpanded = false } else { updateFrame() }
     }
     func dashboard() { dismiss(); openDashboard() }
     func toggleFromMenuBar(anchor: NSRect? = nil) {
         fallbackAnchor = anchor
+        if !model.preferences.notchEnabled { screen = nil }
         if screen == nil { screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) } ?? NSScreen.main; notchHeight = 12; notchWidth = 160 }
         click(); panel.orderFrontRegardless()
         // A non-notch monitor uses a conventional menu-bar popover position below the bar.
@@ -95,11 +102,13 @@ final class NotchPanel: NSPanel {
     private func dismissIfOutside() { if !panel.frame.contains(NSEvent.mouseLocation) { dismiss() } }
     private func updateFrame(animated: Bool = true) {
         guard let screen else { return }
-        let top = screen.safeAreaInsets.top > 0 ? screen.frame.maxY : screen.visibleFrame.maxY
-        let desiredX = (screen.safeAreaInsets.top > 0 ? screen.frame.midX : (fallbackAnchor?.midX ?? screen.frame.midX)) - size.width / 2
+        let physicalNotch = model.preferences.notchEnabled && screen.safeAreaInsets.top > 0
+        let top = physicalNotch ? screen.frame.maxY : screen.visibleFrame.maxY
+        let desiredX = (physicalNotch ? screen.frame.midX : (fallbackAnchor?.midX ?? screen.frame.midX)) - size.width / 2
         let x = min(screen.frame.maxX - size.width - 8, max(screen.frame.minX + 8, desiredX))
         let frame = NSRect(x: x, y: top - size.height, width: size.width, height: size.height)
-        let animate = animated && model.preferences.animations && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        model.notchExpanded = state != .collapsed
+        let animate = animated && model.preferences.animations && !model.preferences.reducedEffects && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         panel.setFrame(frame, display: true, animate: animate)
     }
 }
